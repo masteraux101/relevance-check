@@ -36,7 +36,7 @@ jobs:
         env:
           API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
         with:
-          source-directory: 'artifact'
+          source-directory: 'dist'
           destination-github-username: 'masteraux101'
           destination-repository-name: 'masteraux101.github.io'
           user-email: github-action@github.com
