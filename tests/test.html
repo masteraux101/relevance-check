@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSM-Attention 模型测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2rem;
+            background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(90deg, #00d4ff, #0099cc);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(90deg, #7b2cbf, #5a189a);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(90deg, #dc2626, #991b1b);
+            color: white;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .stat-card h3 {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+        
+        .test-results {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .test-results h2 {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+        
+        .test-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .test-item.passed {
+            border-left: 3px solid #22c55e;
+        }
+        
+        .test-item.failed {
+            border-left: 3px solid #ef4444;
+        }
+        
+        .test-item.running {
+            border-left: 3px solid #eab308;
+        }
+        
+        .test-item.pending {
+            border-left: 3px solid #6b7280;
+            opacity: 0.6;
+        }
+        
+        .test-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 12px;
+            font-size: 16px;
+        }
+        
+        .test-name {
+            flex: 1;
+        }
+        
+        .test-time {
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .log-container {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            padding: 20px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .log-entry.info { color: #94a3b8; }
+        .log-entry.success { color: #22c55e; }
+        .log-entry.error { color: #ef4444; }
+        .log-entry.warning { color: #eab308; }
+        .log-entry.timing { color: #00d4ff; }
+        
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+            transition: width 0.3s ease;
+            border-radius: 3px;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .spinner {
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 SSM-Attention 模型测试套件</h1>
+        
+        <div class="controls">
+            <button id="runAllBtn" class="btn-primary" onclick="runAllTests()">
+                ▶️ 运行全部测试
+            </button>
+            <button id="runPerfBtn" class="btn-secondary" onclick="runPerformanceTests()">
+                ⚡ 性能测试
+            </button>
+            <button id="clearBtn" class="btn-danger" onclick="clearResults()">
+                🗑️ 清除结果
+            </button>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>通过测试</h3>
+                <div class="value" id="passedCount">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>失败测试</h3>
+                <div class="value" id="failedCount">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>总耗时</h3>
+                <div class="value" id="totalTime">0 ms</div>
+            </div>
+            <div class="stat-card">
+                <h3>张量数量</h3>
+                <div class="value" id="tensorCount">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>内存使用</h3>
+                <div class="value" id="memoryUsage">0 MB</div>
+            </div>
+            <div class="stat-card">
+                <h3>TF.js 后端</h3>
+                <div class="value" id="backend">-</div>
+            </div>
+        </div>
+        
+        <div class="test-results">
+            <h2>📋 测试结果</h2>
+            <div id="testList"></div>
+        </div>
+        
+        <div class="log-container" id="logContainer">
+            <div class="log-entry info">等待开始测试...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as tf from 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/+esm';
+        
+        window.tf = tf;
+        
+        // 测试状态
+        const state = {
+            passed: 0,
+            failed: 0,
+            startTime: 0,
+            tests: []
+        };
+        
+        // 日志
+        function log(message, type = 'info') {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // 更新统计
+        function updateStats() {
+            document.getElementById('passedCount').textContent = state.passed;
+            document.getElementById('failedCount').textContent = state.failed;
+            document.getElementById('totalTime').textContent = 
+                `${(performance.now() - state.startTime).toFixed(0)} ms`;
+            document.getElementById('tensorCount').textContent = tf.memory().numTensors;
+            document.getElementById('memoryUsage').textContent = 
+                `${(tf.memory().numBytes / 1024 / 1024).toFixed(1)} MB`;
+            document.getElementById('backend').textContent = tf.getBackend();
+        }
+        
+        // 更新测试项
+        function updateTestItem(name, status, time = null) {
+            let item = document.querySelector(`[data-test="${name}"]`);
+            if (!item) {
+                item = document.createElement('div');
+                item.className = 'test-item pending';
+                item.dataset.test = name;
+                item.innerHTML = `
+                    <span class="test-icon">⏳</span>
+                    <span class="test-name">${name}</span>
+                    <span class="test-time"></span>
+                `;
+                document.getElementById('testList').appendChild(item);
+            }
+            
+            item.className = `test-item ${status}`;
+            const icon = item.querySelector('.test-icon');
+            const timeEl = item.querySelector('.test-time');
+            
+            switch(status) {
+                case 'running':
+                    icon.innerHTML = '<span class="spinner">⏳</span>';
+                    break;
+                case 'passed':
+                    icon.textContent = '✅';
+                    break;
+                case 'failed':
+                    icon.textContent = '❌';
+                    break;
+            }
+            
+            if (time !== null) {
+                timeEl.textContent = `${time.toFixed(0)} ms`;
+            }
+        }
+        
+        // 更新进度
+        function updateProgress(current, total) {
+            const percent = (current / total) * 100;
+            document.getElementById('progressBar').style.width = `${percent}%`;
+        }
+        
+        // 测试用例
+        const tests = [
+            {
+                name: 'TensorFlow.js 初始化',
+                fn: async () => {
+                    await tf.ready();
+                    if (!tf.getBackend()) {
+                        throw new Error('后端未初始化');
+                    }
+                    log(`后端: ${tf.getBackend()}`, 'success');
+                }
+            },
+            {
+                name: '张量基本操作',
+                fn: async () => {
+                    const a = tf.tensor2d([[1, 2], [3, 4]]);
+                    const b = tf.tensor2d([[5, 6], [7, 8]]);
+                    const c = tf.matMul(a, b);
+                    const result = await c.array();
+                    a.dispose(); b.dispose(); c.dispose();
+                    
+                    if (result[0][0] !== 19) {
+                        throw new Error('矩阵乘法结果错误');
+                    }
+                }
+            },
+            {
+                name: '张量内存管理',
+                fn: async () => {
+                    const initial = tf.memory().numTensors;
+                    
+                    for (let i = 0; i < 100; i++) {
+                        tf.tidy(() => {
+                            const t = tf.randomNormal([100, 100]);
+                            return t.mean();
+                        });
+                    }
+                    
+                    const final = tf.memory().numTensors;
+                    if (final > initial + 10) {
+                        throw new Error(`张量泄漏: ${initial} -> ${final}`);
+                    }
+                }
+            },
+            {
+                name: 'Dense 层构建',
+                fn: async () => {
+                    const input = tf.input({ shape: [10] });
+                    const dense = tf.layers.dense({ units: 32, activation: 'relu' });
+                    const output = dense.apply(input);
+                    const model = tf.model({ inputs: input, outputs: output });
+                    
+                    const testInput = tf.randomNormal([4, 10]);
+                    const pred = model.predict(testInput);
+                    
+                    if (pred.shape[1] !== 32) {
+                        throw new Error('Dense 层输出形状错误');
+                    }
+                    
+                    testInput.dispose();
+                    pred.dispose();
+                    model.dispose();
+                }
+            },
+            {
+                name: 'LSTM 层构建',
+                fn: async () => {
+                    const input = tf.input({ shape: [20, 10] });
+                    const lstm = tf.layers.lstm({ units: 32, returnSequences: true });
+                    const output = lstm.apply(input);
+                    const model = tf.model({ inputs: input, outputs: output });
+                    
+                    const testInput = tf.randomNormal([2, 20, 10]);
+                    const pred = model.predict(testInput);
+                    
+                    if (pred.shape[1] !== 20 || pred.shape[2] !== 32) {
+                        throw new Error('LSTM 层输出形状错误');
+                    }
+                    
+                    testInput.dispose();
+                    pred.dispose();
+                    model.dispose();
+                }
+            },
+            {
+                name: 'GRU 层构建',
+                fn: async () => {
+                    const input = tf.input({ shape: [20, 10] });
+                    const gru = tf.layers.gru({ units: 32, returnSequences: false });
+                    const output = gru.apply(input);
+                    const model = tf.model({ inputs: input, outputs: output });
+                    
+                    const testInput = tf.randomNormal([2, 20, 10]);
+                    const pred = model.predict(testInput);
+                    
+                    if (pred.shape[1] !== 32) {
+                        throw new Error('GRU 层输出形状错误');
+                    }
+                    
+                    testInput.dispose();
+                    pred.dispose();
+                    model.dispose();
+                }
+            },
+            {
+                name: 'LayerNormalization',
+                fn: async () => {
+                    const input = tf.input({ shape: [10, 32] });
+                    const norm = tf.layers.layerNormalization({ axis: -1 });
+                    const output = norm.apply(input);
+                    const model = tf.model({ inputs: input, outputs: output });
+                    
+                    const testInput = tf.randomNormal([4, 10, 32]);
+                    const pred = model.predict(testInput);
+                    
+                    // 验证归一化后均值接近0
+                    const mean = pred.mean().arraySync();
+                    if (Math.abs(mean) > 1) {
+                        throw new Error('LayerNormalization 结果异常');
+                    }
+                    
+                    testInput.dispose();
+                    pred.dispose();
+                    model.dispose();
+                }
+            },
+            {
+                name: '复合模型构建',
+                fn: async () => {
+                    const input = tf.input({ shape: [30, 15] });
+                    
+                    let x = tf.layers.dense({ units: 32, activation: 'relu' }).apply(input);
+                    x = tf.layers.layerNormalization().apply(x);
+                    x = tf.layers.lstm({ units: 32, returnSequences: true }).apply(x);
+                    x = tf.layers.dropout({ rate: 0.1 }).apply(x);
+                    x = tf.layers.gru({ units: 16, returnSequences: false }).apply(x);
+                    const output = tf.layers.dense({ units: 20 }).apply(x);
+                    
+                    const model = tf.model({ inputs: input, outputs: output });
+                    model.compile({ optimizer: 'adam', loss: 'mse' });
+                    
+                    log(`模型参数: ${model.countParams()}`, 'info');
+                    
+                    const testInput = tf.randomNormal([2, 30, 15]);
+                    const pred = model.predict(testInput);
+                    
+                    if (pred.shape[1] !== 20) {
+                        throw new Error('复合模型输出形状错误');
+                    }
+                    
+                    testInput.dispose();
+                    pred.dispose();
+                    model.dispose();
+                }
+            },
+            {
+                name: '小规模训练',
+                fn: async () => {
+                    const input = tf.input({ shape: [10, 5] });
+                    let x = tf.layers.dense({ units: 16 }).apply(input);
+                    x = tf.layers.lstm({ units: 8, returnSequences: false }).apply(x);
+                    const output = tf.layers.dense({ units: 3 }).apply(x);
+                    
+                    const model = tf.model({ inputs: input, outputs: output });
+                    model.compile({ optimizer: tf.train.adam(0.01), loss: 'mse' });
+                    
+                    const trainX = tf.randomNormal([20, 10, 5]);
+                    const trainY = tf.randomNormal([20, 3]);
+                    
+                    const history = await model.fit(trainX, trainY, {
+                        epochs: 5,
+                        batchSize: 8,
+                        verbose: 0
+                    });
+                    
+                    const losses = history.history.loss;
+                    log(`训练损失: ${losses[0].toFixed(4)} -> ${losses[losses.length-1].toFixed(4)}`, 'info');
+                    
+                    if (losses.some(l => isNaN(l))) {
+                        throw new Error('训练出现 NaN');
+                    }
+                    
+                    trainX.dispose();
+                    trainY.dispose();
+                    model.dispose();
+                }
+            },
+            {
+                name: '批量推理性能',
+                fn: async () => {
+                    const input = tf.input({ shape: [30, 10] });
+                    let x = tf.layers.dense({ units: 32 }).apply(input);
+                    x = tf.layers.lstm({ units: 16, returnSequences: false }).apply(x);
+                    const output = tf.layers.dense({ units: 5 }).apply(x);
+                    
+                    const model = tf.model({ inputs: input, outputs: output });
+                    
+                    // 预热
+                    const warmup = tf.randomNormal([1, 30, 10]);
+                    model.predict(warmup).dispose();
+                    warmup.dispose();
+                    
+                    // 测试不同批次大小
+                    const results = [];
+                    for (const bs of [1, 4, 16]) {
+                        const testInput = tf.randomNormal([bs, 30, 10]);
+                        const start = performance.now();
+                        
+                        for (let i = 0; i < 5; i++) {
+                            const pred = model.predict(testInput);
+                            pred.dispose();
+                        }
+                        
+                        const time = (performance.now() - start) / 5;
+                        results.push({ bs, time, perSample: time / bs });
+                        testInput.dispose();
+                    }
+                    
+                    log(`推理性能: ${results.map(r => `bs=${r.bs}: ${r.time.toFixed(1)}ms`).join(', ')}`, 'info');
+                    
+                    model.dispose();
+                }
+            },
+            {
+                name: '数值稳定性',
+                fn: async () => {
+                    // 测试极大值
+                    const large = tf.tidy(() => {
+                        const input = tf.tensor2d([[1e8, 1e8, 1e8]]);
+                        return tf.layers.layerNormalization().apply(input).arraySync();
+                    });
+                    
+                    if (!isFinite(large[0][0])) {
+                        throw new Error('极大值处理失败');
+                    }
+                    
+                    // 测试极小值
+                    const small = tf.tidy(() => {
+                        const input = tf.tensor2d([[1e-8, 1e-8, 1e-8]]);
+                        return tf.layers.layerNormalization().apply(input).arraySync();
+                    });
+                    
+                    if (!isFinite(small[0][0])) {
+                        throw new Error('极小值处理失败');
+                    }
+                    
+                    log('数值稳定性检查通过', 'success');
+                }
+            },
+            {
+                name: '内存压力测试',
+                fn: async () => {
+                    const initialTensors = tf.memory().numTensors;
+                    
+                    for (let i = 0; i < 50; i++) {
+                        await tf.tidy(() => {
+                            const a = tf.randomNormal([32, 30, 32]);
+                            const b = tf.randomNormal([32, 32, 30]);
+                            return tf.matMul(a, b).mean();
+                        });
+                    }
+                    
+                    const finalTensors = tf.memory().numTensors;
+                    const leaked = finalTensors - initialTensors;
+                    
+                    log(`张量变化: ${initialTensors} -> ${finalTensors} (泄漏: ${leaked})`, 
+                        leaked > 5 ? 'warning' : 'success');
+                    
+                    if (leaked > 20) {
+                        throw new Error(`张量泄漏过多: ${leaked}`);
+                    }
+                }
+            }
+        ];
+        
+        // 运行所有测试
+        window.runAllTests = async function() {
+            const runBtn = document.getElementById('runAllBtn');
+            runBtn.disabled = true;
+            
+            state.passed = 0;
+            state.failed = 0;
+            state.startTime = performance.now();
+            
+            document.getElementById('testList').innerHTML = '';
+            document.getElementById('logContainer').innerHTML = '';
+            
+            log('开始运行测试...', 'info');
+            log(`TensorFlow.js 版本: ${tf.version.tfjs}`, 'info');
+            
+            for (let i = 0; i < tests.length; i++) {
+                const test = tests[i];
+                updateTestItem(test.name, 'running');
+                updateProgress(i, tests.length);
+                
+                const start = performance.now();
+                try {
+                    await test.fn();
+                    const time = performance.now() - start;
+                    state.passed++;
+                    updateTestItem(test.name, 'passed', time);
+                    log(`✅ ${test.name} (${time.toFixed(0)}ms)`, 'success');
+                } catch (error) {
+                    const time = performance.now() - start;
+                    state.failed++;
+                    updateTestItem(test.name, 'failed', time);
+                    log(`❌ ${test.name}: ${error.message}`, 'error');
+                }
+                
+                updateStats();
+                
+                // 小延迟让UI更新
+                await new Promise(r => setTimeout(r, 50));
+            }
+            
+            updateProgress(tests.length, tests.length);
+            
+            log('', 'info');
+            log(`========== 测试完成 ==========`, 'info');
+            log(`通过: ${state.passed}, 失败: ${state.failed}`, 
+                state.failed === 0 ? 'success' : 'error');
+            log(`总耗时: ${(performance.now() - state.startTime).toFixed(0)} ms`, 'timing');
+            
+            runBtn.disabled = false;
+        };
+        
+        // 性能测试
+        window.runPerformanceTests = async function() {
+            const perfBtn = document.getElementById('runPerfBtn');
+            perfBtn.disabled = true;
+            
+            document.getElementById('logContainer').innerHTML = '';
+            log('开始性能测试...', 'info');
+            
+            // 推理延迟测试
+            log('', 'info');
+            log('📊 推理延迟测试', 'info');
+            
+            const input = tf.input({ shape: [60, 15] });
+            let x = tf.layers.dense({ units: 64, activation: 'relu' }).apply(input);
+            x = tf.layers.lstm({ units: 32, returnSequences: true }).apply(x);
+            x = tf.layers.gru({ units: 32, returnSequences: false }).apply(x);
+            const output = tf.layers.dense({ units: 20 }).apply(x);
+            
+            const model = tf.model({ inputs: input, outputs: output });
+            
+            // 预热
+            const warmup = tf.randomNormal([1, 60, 15]);
+            model.predict(warmup).dispose();
+            warmup.dispose();
+            
+            for (const bs of [1, 2, 4, 8, 16, 32]) {
+                const testInput = tf.randomNormal([bs, 60, 15]);
+                const times = [];
+                
+                for (let i = 0; i < 10; i++) {
+                    const start = performance.now();
+                    const pred = model.predict(testInput);
+                    pred.dispose();
+                    times.push(performance.now() - start);
+                }
+                
+                testInput.dispose();
+                
+                const avg = times.reduce((a, b) => a + b, 0) / times.length;
+                const min = Math.min(...times);
+                const max = Math.max(...times);
+                
+                log(`  批次 ${bs.toString().padStart(2)}: 平均 ${avg.toFixed(1)}ms, ` +
+                    `最小 ${min.toFixed(1)}ms, 最大 ${max.toFixed(1)}ms`, 'timing');
+            }
+            
+            model.dispose();
+            
+            // 内存增长测试
+            log('', 'info');
+            log('📊 内存增长测试', 'info');
+            
+            const memStart = tf.memory().numBytes;
+            const tensorStart = tf.memory().numTensors;
+            
+            for (let i = 0; i < 100; i++) {
+                tf.tidy(() => {
+                    const a = tf.randomNormal([64, 64, 64]);
+                    return a.sum();
+                });
+            }
+            
+            const memEnd = tf.memory().numBytes;
+            const tensorEnd = tf.memory().numTensors;
+            
+            log(`  内存: ${(memStart/1024/1024).toFixed(2)}MB -> ${(memEnd/1024/1024).toFixed(2)}MB`, 
+                memEnd > memStart * 1.5 ? 'warning' : 'success');
+            log(`  张量: ${tensorStart} -> ${tensorEnd}`, 
+                tensorEnd > tensorStart + 10 ? 'warning' : 'success');
+            
+            log('', 'info');
+            log('性能测试完成', 'success');
+            
+            perfBtn.disabled = false;
+            updateStats();
+        };
+        
+        // 清除结果
+        window.clearResults = function() {
+            state.passed = 0;
+            state.failed = 0;
+            document.getElementById('testList').innerHTML = '';
+            document.getElementById('logContainer').innerHTML = '<div class="log-entry info">等待开始测试...</div>';
+            document.getElementById('progressBar').style.width = '0%';
+            updateStats();
+        };
+        
+        // 初始化
+        tf.ready().then(() => {
+            log(`TensorFlow.js 已就绪`, 'success');
+            log(`后端: ${tf.getBackend()}`, 'info');
+            log(`版本: ${tf.version.tfjs}`, 'info');
+            updateStats();
+        });
+        
+        // 定期更新统计
+        setInterval(updateStats, 1000);
+    </script>
+</body>
+</html>
