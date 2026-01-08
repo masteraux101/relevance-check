@@ -31,10 +31,6 @@ jobs:
       - name: Rename index.html to main.html
         run: |
           mv dist/index.html dist/main.html
-      - name: Prepare artifact
-        run: |
-          mkdir -p artifact/ssm-attention-kline-predictor
-          cp -r dist/* artifact/ssm-attention-kline-predictor/
       - name: Push to github pages repo
         uses: cpina/github-action-push-to-another-repository@main
         env:
@@ -46,4 +42,4 @@ jobs:
           user-email: github-action@github.com
           user-name: github-action
           target-branch: main
-          target-directory: '/'
+          target-directory: '/ssm-attention-kline-predictor'
